@@ -1,0 +1,14 @@
+---
+:id: 50147587
+:submitters:
+- :name: Julia Chen
+  :email: chen45@umail.ucsb.edu
+- :name: Yanjie Qi
+  :email: yanjie@ucsb.edu
+:created_at: !ruby/object:ActiveSupport::TimeWithZone
+  utc: 2020-10-19 06:17:22.924534000 Z
+  zone: !ruby/object:ActiveSupport::TimeZone
+    name: America/Los_Angeles
+  time: 2020-10-18 23:17:22.924534000 Z
+:status: processed
+:score: 114.0
