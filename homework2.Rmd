@@ -1,0 +1,221 @@
+---
+title: "PSTAT 115, Fall 2020 Homework 2"
+author: "Yanjie Qi, Jianing (Julia) Chen"
+date: "__Due on October 25, 2020 at 11:59 pm__"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(testthat)
+knitr::opts_chunk$set(echo=TRUE, 
+                      cache=FALSE, 
+                      fig.width=5, 
+                      fig.height=5,
+                      fig.align='center')
+indent1 = '    '
+indent2 = paste(rep(indent1, 2), collapse='')
+indent3 = paste(rep(indent1, 3), collapse='')
+r = function(x, digits=2){ round(x, digits=digits) }
+library(tidyverse)
+library(reshape2)
+```
+
+__Note:__ If you are working with a partner, please submit only one homework per group with both names and whether you are taking the course for graduate credit or not.  Submit your Rmarkdown (.Rmd) and the compiled pdf on Gauchospace.
+ 
+## 1. Cancer Research in Laboratory Mice
+
+A laboratory is estimating the rate of tumorigenesis (the formation of tumors) in two strains of mice, A and B.  They have tumor count data for 10 mice in strain A and 13 mice in strain B.  Type A mice have been well studied, and information from other laboratories suggests that type A mice have tumor counts that are approximately Poisson-distributed. Tumor count rates for type B mice are unknown, but type B mice are related to type A mice. Assuming a Poisson sampling distribution for each group with rates $\theta_A$ and $\theta_B$. Based on previous research you settle on the following prior distribution:
+
+$$ \theta_A \sim \text{gamma}(120, 10),\ \theta_B\sim\text{gamma}(12, 1)$$ 
+
+**1a.** Before seeing any data, which group do you expect to have a higher average incidence of cancer?  Which group are you more certain about a priori? You answers should be based on the priors specified above.
+    
+
+The group A and B are expected to have the same incidence of cancer, since the expection of $\theta_A$ is the same as the $\theta_B$, which is 12. We are more certain about the group A since we have greater value of $\alpha$ and $\beta$ for the distribution of $\theta_A$.
+
+    
+**1b.**  After you the complete of the experiment, you  observe the following tumor counts for the two populations: 
+
+$$y_A = (12,9,12,14,13,13,15,8,15,6)$$
+$$y_B = (11,11,10,9,9,8,7,10,6,8,8,9,7)$$
+    
+Compute the posterior parameters, posterior means, posterior variances and 95% quantile-based credible intervals for $\theta_A$ and $\theta_B$.  Same them in the appropriate variables in the code cell below.  You do not need to show your work, but you cannot get partial credit unless you do show work.
+
+```{r summary_stats, echo=FALSE}
+yA <- c(12, 9, 12, 14, 13, 13, 15, 8, 15, 6)
+yB <- c(11, 11, 10, 9, 9, 8, 7, 10, 6, 8, 8, 9, 7)
+
+# Prior parameters here
+alpha_A = 120
+beta_A = 10 
+
+alpha_B = 12
+beta_B = 1 
+
+# Posterior parameters here
+alpha_A_posterior = alpha_A + sum(yA) 
+beta_A_posterior = beta_A + length(yA)
+
+alpha_B_posterior = alpha_B + sum(yB) 
+beta_B_posterior = beta_B + length(yB)
+            
+## Posterior mean and variance for each group        
+A_post_mean <- alpha_A_posterior / beta_A_posterior 
+A_post_var <- alpha_A_posterior / beta_A_posterior^2
+
+# Posterior quantiles for each group
+B_post_mean <- alpha_B_posterior / beta_B_posterior 
+B_post_var <- alpha_B_posterior / beta_B_posterior^2
+
+print(paste0("Posterior mean of theta_A ", round(A_post_mean, 2)))
+print(paste0("Posterior variance of theta_A ", round(A_post_var, 2)))
+print(paste0("Posterior mean of theta_B ", round(B_post_mean, 2)))
+print(paste0("Posterior variance of theta_B ", round(B_post_var, 2)))
+
+# Posterior quantiles
+alpha_A_quantile <- c(qgamma(0.025,alpha_A_posterior, beta_A_posterior),
+                      qgamma(0.975,alpha_A_posterior, beta_A_posterior))
+alpha_B_quantile <- c(qgamma(0.025,alpha_B_posterior, beta_B_posterior),
+                      qgamma(0.975,alpha_B_posterior, beta_B_posterior))
+
+print(paste0("Posterior 95% quantile for theta_A is [", round(alpha_A_quantile[1],2), ", ", round(alpha_A_quantile[2], 2), "]"))
+print(paste0("Posterior 95% quantile for theta_B is [", round(alpha_B_quantile[1],2), ", ", round(alpha_B_quantile[2], 2), "]"))
+```
+
+```{r}
+. = ottr::check("tests/q1b.R")
+```
+
+
+        
+**1c.** Compute and plot the posterior expectation of $\theta_B$ given $y_B$ under the prior distribution  $\text{gamma}(12\times n_0, n_0)$ for each value of $n_0 \in \{1,2,...,50\}$. As a reminder, $n_0$ can be thought of as the number of prior observations (or pseudo-counts).  
+
+```{r}
+
+n_0 <- seq(1, 50)
+alpha_post <- 12*n_0 + sum(yB)
+beta_post <- n_0 + length(yB)
+
+posterior_means = alpha_post / beta_post
+
+plot(x = n_0, y = posterior_means, xlab = "n_0", ylab = "Posterial Expectation")
+```
+
+```{r}
+. = ottr::check("tests/q1c.R")
+```
+
+
+
+**1d.** Should knowledge about population A tell us anything about population B? Discuss whether or not it makes sense to have $p(\theta_A, \theta_B) = p(\theta_A) \times p(\theta_B)$.  
+
+Since labortory A and B are known to be related, their mean are supposed to be almost the same. The knowledge about population A could be helpful for infering the mean of population B. $p(\theta_A, \theta_B) = p(\theta_A) \times p(\theta_B)$ should be reasonable, since $\theta_A$ and $\theta_B$ are independent.
+
+
+\vspace{.2in}
+
+## 2. A Mixture Prior for Heart Transplant Surgeries
+
+A hospital in the United States wants to evaluate their success rate of heart transplant surgeries.  We observe the number of deaths, $y$, in a number of heart transplant surgeries. Let $y \sim \text{Pois}(\nu\lambda)$ where $\lambda$ is the rate of deaths/patient and $\nu$ is the exposure (total number of heart transplant patients).  When measuring rare events with low rates, maximum likelihood estimation can be notoriously bad.  We'll tak a Bayesian approach.  To construct your prior distribution you talk to two experts.  The first expert thinks that $p_1(\lambda)$ with a $\text{gamma}(3, 2000)$ density is a reasonable prior. The second expert thinks that $p_2(\lambda)$ with a $\text{gamma}(7, 1000)$ density is a reasonable prior distribution.  You decide that each expert is equally credible so you combine their prior distributions into a mixture prior with equal weights: $p(\lambda) = 0.5 * p_1(\lambda) + 0.5 * p_2(\lambda)$
+
+**2a.** What does each expert think the mean rate is, _a priori_? Which expert is more confident about the value of $\lambda$ a priori (i.e. before seeing any data)?
+    
+The first expert thinks the mean rate is $\frac{3}{2000}$ and the second expert thinks the mean rate should be $\frac{7}{1000}$. The credible interval for two experts should be:
+```{r}
+CI_1 <- round(c(qgamma(0.025, 3, 2000), qgamma(0.975, 3, 2000)), 4)
+CI_2 <- round(c(qgamma(0.025, 7, 1000), qgamma(0.975, 7, 1000)), 4)
+CI_1
+CI_2
+```
+ Before seeing any data, the credible interval for the first expert should be $[0.0003, 0.0036]$ and for the second expert should be $[0.0028, 0.0131]$. Since the credible interval for the first expert is smaller than the credible interval for the second expert, the first expert is more confident.
+    
+**2b.** Plot the mixture prior distribution.
+
+```{r}
+curve(0.5*dgamma(x, 3, 2000)+0.5*dgamma(x, 7, 1000), 
+      from = 0, to = 0.03, xlab = "Probability", ylab = "Density",
+      main="Mixture prior distribution")
+```
+
+
+       
+    
+**2c.** Suppose the hospital has $y=8$ deaths with an exposure of $\nu=1767$ surgeries performed.  Write the posterior distribution up to a proportionality constant by multiplying the likelihood and the prior density.  _Warning:_ be very careful about what constitutes a proportionality constant in this example.    
+    
+The posterior distribution should be:
+
+$$
+\begin{aligned}
+P(\lambda \mid y_{1}, ..., y_{n}) &\propto L(\lambda) \times P(\lambda) \\
+&= (\lambda\nu_{i})^{y_{i}}e^{-\lambda\nu_{i}} \times [0.5p_{1}(\lambda)+0.5p_{2}(\lambda)]\\
+&= (\lambda\nu_{i})^{y_{i}}e^{-\lambda\nu_{i}} \times [0.5\cdot \frac{\lambda^{3-1}2000^{3}e^{-2000\lambda}}{\Gamma(3)} +0.5 \cdot \frac{\lambda^{7-1}1000^{7}e^{-1000\lambda}}{\Gamma(7)} ] \\
+&= \frac{2000^3}{2\Gamma(3)} \lambda^{y+2}e^{-(2000+\nu)\lambda} + \frac{1000^7}{2\Gamma(7)} \lambda^{y+6}e^{-(1000+\nu)\lambda}\\
+&= \frac{2000^3}{2\Gamma(3)}(1678^8)\lambda^{10} e^{-3767\lambda} +\frac{1000^7}{2\Gamma(7)}(1678^8)\lambda^{14} e^{-2767\lambda} \\
+&= \frac{1767^8}{2\Gamma(3)} (2000^3\lambda^{10}e^{-3767\lambda}+\frac{1000^7}{360}\lambda^{14}e^{-2767\lambda})\\
+&\propto 2000^3 \lambda^{10}e^{-3767\lambda} + \frac{1000^7}{360} \lambda^{14}e^{-2767\lambda}
+\end{aligned}
+$$
+
+    
+**2d.** Let $K = \int L(\lambda; y)p(\lambda) d\lambda$ be the integral of the proportional posterior.  Then the proper posterior density, i.e. a true density integrates to 1, can be expressed as $p(\lambda \mid y) = \frac{L(\lambda; y)p(\lambda)}{K}$.  Compute this posterior density and clearly express the density as a mixture of two gamma distributions. 
+   
+
+$$
+\begin{aligned}
+K &= \int_{0}^{\infty} L(\lambda; y)p(\lambda) d\lambda \\
+&= \int_{0}^{\infty} (2000^3 \lambda^{10}e^{-3767\lambda} + \frac{1000^7}{360} \lambda^{14}e^{-2767\lambda})  d\lambda \\
+&= \int_{0}^{\infty} 2000^3 \lambda^{10}e^{-3767\lambda} + \int_{0}^{\infty} \frac{1000^7}{360} \lambda^{14}e^{-2767\lambda} d\lambda \\
+&= 2000^3\frac{\Gamma(11)}{3767^{11}} + \frac{1000^7}{360}\frac{\Gamma(15)}{2767^{15}} 
+\end{aligned}
+$$
+Then we will have: 
+
+$$
+\begin{aligned}
+P(\lambda \mid y_{1}, ..., y_{n}) =  \frac{L(\lambda) \times P(\lambda)}{K}\\
+\frac{1}{K} \int_{0}^{\infty} L(\lambda; y)p(\lambda) d\lambda  &= 1 \\
+\frac{1}{K} (\int_{0}^{\infty} 2000^3 \lambda^{10}e^{-3767\lambda} d\lambda + \int_{0}^{\infty} \frac{1000^7}{360}  \lambda^{14}e^{-2767\lambda} d\lambda) &= 1
+\end{aligned}
+$$
+
+We  know that for gamma($\alpha$, $\beta$), 
+$f(\lambda) = \frac{\lambda^{\alpha-1}\beta^{\alpha}e^{-\beta\lambda}}{\Gamma(\alpha)}$.
+
+$f(\lambda\nu) = Gamma(\alpha, \beta) = \frac{1}{K} \int_{0}^{\infty} \lambda^{\alpha-1}e^{-\lambda\nu} d\lambda$
+
+
+
+
+Therefore, the density we got from the intergral above should be equivalent to 
+
+$$
+\begin{aligned}
+\frac{2000^3\lambda^{10}e^{-3767\lambda}+\frac{1000^7}{360}\lambda^{14}e^{-2767\lambda}}{2000^3(\frac{\Gamma(11)}{3767^{11}})+\frac{1000^7}{360}(\frac{\Gamma(15)}{2767^{15}})}\\
+\end{aligned}
+$$
+
+$$\frac{(\frac{2000^3\Gamma(11)}{3767^{11}})}{(2000^3\frac{\Gamma(11)}{3767^{11}})+(\frac{1000^7}{360}\frac{\Gamma(15)}{2767^{15}})} Gam(11, 3767) + \frac{(\frac{1000^7}{360}\frac{\Gamma(15)}{2767^{15}})}{(2000^3\frac{\Gamma(11)}{3767^{11}})+(\frac{1000^7}{360}\frac{\Gamma(15)}{2767^{15}})} Gamma(15, 2767)$$
+
+Suppose $a = \frac{2000^3\Gamma(11)}{3767^{11}})$ and $b=\frac{1000^7}{360}\frac{\Gamma(15)}{2767^{15}}$, the above is the same as:
+
+$$(\frac{a}{a+b}) Gam(11,3767)+(\frac{b}{a+b})Gam(15,2767)$$
+
+
+
+
+**2e.**  Plot the posterior distribution.  Add vertical lines clearly indicating the prior means from each expert.  Also add a vertical line for the maximum likelihood estimate.  
+    
+
+```{r}
+a = 2000^3 * (gamma(11)/3767^(11))
+b = (1000^7)/360 * (gamma(15)/2767^(15))
+
+curve(a/(a+b)*dgamma(x, 11, 3767) + b/(a+b)* dgamma(x, 15, 2767), 
+      from = 0, to = 0.015, xlab = "Probability", ylab = "Density")
+abline(v=(8/1767), col='red') # MLE
+abline(v=(3/2000), col='purple') # Expert 1 MLE
+abline(v=(7/1000), col='blue') # Expert 2 MLE
+legend('topright',legend = c("MLE", "Expert 1 MLE", "Expert 2 MLE"), 
+       col = c("red", "purple", "blue"), lty = 1, cex = 0.7)
+```
